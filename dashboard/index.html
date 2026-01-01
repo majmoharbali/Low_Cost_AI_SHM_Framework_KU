@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Low-Cost AI-Driven SHM Dashboard | Infrastructure Resilience for Developing Nations</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        /* CSS VARIABLES FOR THEMING */
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --transition-speed: 0.3s;
+        }
+
+        /* DARK THEME (Default) */
+        body.dark-mode {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --text-sub: #94a3b8;
+            --border: #334155;
+            --bridge-bg: radial-gradient(circle at center, #334155 0%, #1e293b 70%);
+            --chart-grid: #334155;
+            --chart-text: #94a3b8;
+        }
+
+        /* LIGHT THEME */
+        body.light-mode {
+            --bg: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --bridge-bg: radial-gradient(circle at center, #e2e8f0 0%, #cbd5e1 70%);
+            --chart-grid: #e2e8f0;
+            --chart-text: #64748b;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            transition: background var(--transition-speed), color var(--transition-speed);
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .col-3 {
+            grid-column: span 3;
+        }
+
+        .col-4 {
+            grid-column: span 4;
+        }
+
+        .col-6 {
+            grid-column: span 6;
+        }
+
+        .col-8 {
+            grid-column: span 8;
+        }
+
+        .col-12 {
+            grid-column: span 12;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            transition: background var(--transition-speed), border-color var(--transition-speed);
+        }
+
+        h2 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-sub);
+            margin: 0 0 15px 0;
+            font-weight: 700;
+        }
+
+        /* Bridge Visualization */
+        .bridge-container {
+            position: relative;
+            height: 220px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bridge-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        /* Sensor Nodes */
+        .sensor-node {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #94a3b8;
+            border: 2px solid white;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .sensor-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        /* Status Animations */
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        @keyframes pulse-yellow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(245, 158, 11, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+            }
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .status-0 {
+            background: var(--success);
+            animation: pulse-green 2s infinite;
+        }
+
+        .status-1 {
+            background: var(--warning);
+            animation: pulse-yellow 1.5s infinite;
+        }
+
+        .status-2 {
+            background: var(--danger);
+            animation: pulse-red 0.8s infinite;
+        }
+
+        /* Typography */
+        .value-huge {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1.1;
+            margin-bottom: 5px;
+        }
+
+        .value-sub {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+
+        /* Probability Bars */
+        .prob-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .prob-label {
+            width: 80px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+
+        .prob-track {
+            flex-grow: 1;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            margin: 0 15px;
+            overflow: hidden;
+        }
+
+        .prob-fill {
+            height: 100%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .prob-val {
+            width: 45px;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+        }
+
+        /* Connection Badge */
+        .conn-badge {
+            position: absolute;
+            top: 20px;
+            right: 70px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .conn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #94a3b8;
+        }
+
+        .conn-active .conn-dot {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Chart Styling override */
+        canvas {
+            max-height: 100%;
+        }
+
+        /* XAI Text Area */
+        .xai-container {
+            background: linear-gradient(145deg, var(--card-bg), var(--bg));
+        }
+    </style>
+</head>
+
+<body class="dark-mode">
+    <div class="grid">
+        <div class="col-12"
+            style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:15px; position:relative;">
+            <div>
+                <h1
+                    style="margin:0; font-size:2.4rem; font-weight:900; background: linear-gradient(90deg, var(--primary), #7c3aed); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.02em;">
+                    LOW-COST AI-DRIVEN SHM DASHBOARD
+                </h1>
+                <div style="font-size:1rem; color:var(--text-sub); margin-top: 4px; font-weight: 500;">
+                    Democratizing Infrastructure Resilience • Sustainable Monitoring for Developing Nations • Sudan
+                    Focus
+                </div>
+            </div>
+
+            <div class="conn-badge" id="conn-badge">
+                <div class="conn-dot"></div> <span id="conn-text">Connecting...</span>
+            </div>
+
+            <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Switch Theme">
+                <svg id="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg id="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="card col-8">
+            <h2>Live Structure Status</h2>
+            <div class="bridge-container" style="overflow: hidden;">
+                <svg width="100%" height="100%" viewBox="0 0 600 150" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    style="position:absolute; bottom: 0;">
+
+                    <path d="M150 140 V 20" stroke="var(--text-sub)" stroke-width="5" stroke-linecap="round" />
+                    <path d="M140 140 H 160" stroke="var(--text-sub)" stroke-width="3" />
+
+                    <path d="M450 140 V 20" stroke="var(--text-sub)" stroke-width="5" stroke-linecap="round" />
+                    <path d="M440 140 H 460" stroke="var(--text-sub)" stroke-width="3" />
+
+                    <path d="M20 120 H 580" stroke="var(--text-sub)" stroke-width="3" />
+
+                    <path d="M10 120 L 20 110 L 30 120" fill="var(--text-sub)" opacity="0.5" />
+                    <path d="M570 120 L 580 110 L 590 120" fill="var(--text-sub)" opacity="0.5" />
+
+                    <path d="M20 120 L 150 20" stroke="var(--primary)" stroke-width="2.5" fill="none" />
+
+                    <path d="M150 20 Q 300 160 450 20" stroke="var(--primary)" stroke-width="2.5" fill="none" />
+
+                    <path d="M450 20 L 580 120" stroke="var(--primary)" stroke-width="2.5" fill="none" />
+
+                    <g stroke="var(--text-sub)" stroke-width="1.5" opacity="0.4">
+                        <path d="M180 52 V 120" />
+                        <path d="M210 73 V 120" />
+                        <path d="M240 85 V 120" />
+                        <path d="M270 92 V 120" />
+
+                        <path d="M300 95 V 120" />
+
+                        <path d="M330 92 V 120" />
+                        <path d="M360 85 V 120" />
+                        <path d="M390 73 V 120" />
+                        <path d="M420 52 V 120" />
+                    </g>
+                </svg>
+
+                <div id="sensor-0" class="sensor-node" style="left: 25%; top: 80%;">
+                    <div class="sensor-label" style="margin-top: -35px;">S0</div>
+                </div>
+                <div id="sensor-1" class="sensor-node" style="left: 50%; top: 80%;">
+                    <div class="sensor-label" style="margin-top: -35px;">S1</div>
+                </div>
+                <div id="sensor-2" class="sensor-node" style="left: 75%; top: 80%;">
+                    <div class="sensor-label" style="margin-top: -35px;">S2</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card col-4">
+            <h2>Bayesian Health Assessment</h2>
+            <div id="health-status-text" class="value-huge" style="color:var(--success)">Healthy</div>
+            <div class="value-sub" style="margin-bottom:20px;">Fused Confidence Interval</div>
+
+            <div class="prob-row">
+                <div class="prob-label">HEALTHY</div>
+                <div class="prob-track">
+                    <div id="bar-h" class="prob-fill" style="width:0%; background:var(--success)"></div>
+                </div>
+                <div id="val-h" class="prob-val">0%</div>
+            </div>
+            <div class="prob-row">
+                <div class="prob-label">INCIPIENT</div>
+                <div class="prob-track">
+                    <div id="bar-i" class="prob-fill" style="width:0%; background:var(--warning)"></div>
+                </div>
+                <div id="val-i" class="prob-val">0%</div>
+            </div>
+            <div class="prob-row">
+                <div class="prob-label">SEVERE</div>
+                <div class="prob-track">
+                    <div id="bar-s" class="prob-fill" style="width:0%; background:var(--danger)"></div>
+                </div>
+                <div id="val-s" class="prob-val">0%</div>
+            </div>
+
+            <div
+                style="margin-top:20px; padding-top:15px; border-top:1px solid var(--border); font-size:0.8rem; color:var(--text-sub); display:flex; justify-content:space-between;">
+                <span>System Entropy (Uncertainty)</span>
+                <strong id="entropy-val" style="color:var(--text-sub)">0.000</strong>
+            </div>
+        </div>
+
+        <div class="card col-12 xai-container">
+            <h2 style="color:var(--primary)">⚡ AI Physical Interpretation</h2>
+            <div id="xai-text" style="font-size:1.1rem; line-height:1.6; color:var(--text-main); font-weight:300;">
+                Waiting for physics engine analysis...
+            </div>
+        </div>
+
+        <div class="card col-4" style="height:250px">
+            <canvas id="chart0"></canvas>
+        </div>
+        <div class="card col-4" style="height:250px">
+            <canvas id="chart1"></canvas>
+        </div>
+        <div class="card col-4" style="height:250px">
+            <canvas id="chart2"></canvas>
+        </div>
+
+        <div class="card col-3">
+            <h2>Battery</h2>
+            <div id="batt-val" class="value-huge">--%</div>
+            <div id="solar-val" class="value-sub">-- W Charging</div>
+        </div>
+        <div class="card col-3">
+            <h2>Network Health</h2>
+            <div id="net-val" class="value-huge">--%</div>
+            <div class="value-sub">Packet Success Rate</div>
+        </div>
+        <div class="card col-3">
+            <h2>Data Cap</h2>
+            <div id="data-val" class="value-huge">-- MB</div>
+            <div class="value-sub">Daily Usage</div>
+        </div>
+        <div class="card col-3" style="height:250px">
+            <h2>🔍 SHAP Feature Impact</h2>
+            <div style="height:180px; padding: 10px 0;"><canvas id="shapChart"></canvas></div>
+        </div>
+    </div>
+
+    <script>
+        // --- THEME MANAGEMENT ---
+        let isDarkMode = true;
+
+        function initTheme() {
+            // Check system preference
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            setTheme(prefersDark);
+        }
+
+        function toggleTheme() {
+            setTheme(!isDarkMode);
+        }
+
+        function setTheme(isDark) {
+            isDarkMode = isDark;
+            document.body.className = isDark ? 'dark-mode' : 'light-mode';
+
+            // Update Icons
+            document.getElementById('icon-sun').style.display = isDark ? 'block' : 'none';
+            document.getElementById('icon-moon').style.display = isDark ? 'none' : 'block';
+
+            // Update Charts Colors
+            updateChartColors();
+        }
+
+        function updateChartColors() {
+            const gridColor = isDarkMode ? '#334155' : '#e2e8f0';
+            const textColor = isDarkMode ? '#94a3b8' : '#64748b';
+
+            // Update Signal Charts
+            charts.forEach(chart => {
+                chart.options.scales.x.grid.color = gridColor;
+                chart.options.scales.x.ticks.color = textColor;
+                chart.options.scales.x.title.color = textColor;
+                chart.options.scales.y.grid.color = gridColor;
+                chart.options.scales.y.ticks.color = textColor;
+                chart.options.scales.y.title.color = textColor;
+                chart.update('none');
+            });
+
+            // Update SHAP Chart
+            shapChart.options.scales.x.grid.color = gridColor;
+            shapChart.options.scales.x.ticks.color = textColor;
+            shapChart.options.scales.x.title.color = textColor;
+            shapChart.options.scales.y.ticks.color = isDarkMode ? '#f1f5f9' : '#1e293b';
+            shapChart.update('none');
+        }
+
+        // --- CHART CONFIGURATION ---
+        const chartConf = {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: 100 }, (_, i) => (i * 10) + 'ms'),
+                datasets: [{
+                    label: 'Acceleration (g)',
+                    data: [],
+                    borderColor: '#38bdf8',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    fill: true,
+                    backgroundColor: (context) => {
+                        const ctx = context.chart.ctx;
+                        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+                        gradient.addColorStop(0, 'rgba(56, 189, 248, 0.4)');
+                        gradient.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+                        return gradient;
+                    }
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true, text: 'LIVE WAVEFORM SNAPSHOT',
+                        color: '#94a3b8', font: { size: 11, weight: '600' }, padding: { bottom: 10 }
+                    },
+                    tooltip: {
+                        mode: 'index', intersect: false,
+                        callbacks: { label: (ctx) => ` ${ctx.raw.toFixed(4)} g` }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        grid: { color: '#334155', drawOnChartArea: false },
+                        ticks: { color: '#94a3b8', maxTicksLimit: 5 },
+                        title: { display: true, text: 'Time (ms)', color: '#94a3b8', font: { size: 10 } }
+                    },
+                    y: {
+                        display: true, min: -1.5, max: 1.5,
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' },
+                        title: { display: true, text: 'Amplitude (g)', color: '#94a3b8', font: { size: 10 } }
+                    }
+                }
+            }
+        };
+
+        const charts = [
+            new Chart(document.getElementById('chart0'), JSON.parse(JSON.stringify(chartConf))),
+            new Chart(document.getElementById('chart1'), JSON.parse(JSON.stringify(chartConf))),
+            new Chart(document.getElementById('chart2'), JSON.parse(JSON.stringify(chartConf)))
+        ];
+
+        // Set specific titles
+        charts[0].options.plugins.title.text = "SENSOR 0 (LEFT PIER) - WAVEFORM";
+        charts[1].options.plugins.title.text = "SENSOR 1 (MID SPAN) - WAVEFORM";
+        charts[2].options.plugins.title.text = "SENSOR 2 (RIGHT PIER) - WAVEFORM";
+
+        const shapChart = new Chart(document.getElementById('shapChart'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ data: [], backgroundColor: [], barThickness: 18 }] },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        left: 5,
+                        right: 10,
+                        top: 5,
+                        bottom: 5
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: (context) => ` Impact: ${context.parsed.x.toFixed(4)}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        grid: { color: '#334155', drawOnChartArea: true },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 10 }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Impact',
+                            color: '#94a3b8',
+                            font: { size: 10, weight: '600' }
+                        }
+                    },
+                    y: {
+                        display: true,
+                        grid: { display: false },
+                        ticks: {
+                            color: '#f1f5f9',
+                            font: { size: 12, weight: '700' },
+                            padding: 5,
+                            autoSkip: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- CONNECTION & UPDATE LOGIC ---
+        function connect() {
+            const ws = new WebSocket('ws://localhost:8765');
+            const badge = document.getElementById('conn-badge');
+            const statusText = document.getElementById('conn-text');
+
+            ws.onopen = () => {
+                badge.classList.add('conn-active');
+                statusText.textContent = "Live Stream Active";
+                statusText.style.color = "var(--success)";
+            };
+
+            ws.onclose = () => {
+                badge.classList.remove('conn-active');
+                statusText.textContent = "Reconnecting...";
+                statusText.style.color = "var(--danger)";
+                setTimeout(connect, 2000);
+            };
+
+            ws.onmessage = (e) => update(JSON.parse(e.data));
+        }
+
+        function update(data) {
+            // Bridge Visualizer
+            if (data.sensor_fusion && data.sensor_fusion.sensor_states) {
+                const states = data.sensor_fusion.sensor_states;
+                for (let i = 0; i < 3; i++) {
+                    const node = document.getElementById(`sensor-${i}`);
+                    if (node) node.className = `sensor-node status-${states[i].class}`;
+                }
+            }
+
+            // Health Bars
+            if (data.sensor_fusion) {
+                const probs = data.sensor_fusion.aggregated_confidence;
+                const decisions = ['Healthy', 'Incipient Damage', 'Severe Damage'];
+                const colors = ['var(--success)', 'var(--warning)', 'var(--danger)'];
+
+                const decisionIdx = data.sensor_fusion.fused_decision;
+                const statusEl = document.getElementById('health-status-text');
+                if (statusEl) {
+                    statusEl.textContent = decisions[decisionIdx];
+                    statusEl.style.color = colors[decisionIdx];
+                }
+
+                ['h', 'i', 's'].forEach((k, i) => {
+                    const pct = (probs[i] * 100).toFixed(1) + '%';
+                    const bar = document.getElementById(`bar-${k}`);
+                    const val = document.getElementById(`val-${k}`);
+                    if (bar) bar.style.width = pct;
+                    if (val) val.textContent = pct;
+                });
+
+                const ent = document.getElementById('entropy-val');
+                if (ent) ent.textContent = data.sensor_fusion.uncertainty_entropy.toFixed(4);
+            }
+
+            // XAI Text
+            if (data.latest_reading && data.latest_reading.text_explanation) {
+                let txt = data.latest_reading.text_explanation;
+                txt = txt.replace(/\*\*?Severe Damage\*\*?/g, '<span style="color:var(--danger); font-weight:900; text-transform:uppercase; letter-spacing:1px;">SEVERE DAMAGE</span>');
+                txt = txt.replace(/\*\*?Incipient Damage\*\*?/g, '<span style="color:var(--warning); font-weight:900; text-transform:uppercase; letter-spacing:1px;">INCIPIENT DAMAGE</span>');
+                txt = txt.replace(/\*\*?Healthy\*\*?/g, '<span style="color:var(--success); font-weight:900; text-transform:uppercase; letter-spacing:1px;">HEALTHY</span>');
+                txt = txt.replace(/^Conclusion:/, '<strong style="color:var(--primary); font-size:0.9rem; text-transform:uppercase; display:block; margin-bottom:5px;">Conclusion:</strong>');
+                // Bold logic tailored to theme (will inherit font color)
+                txt = txt.replace(/\*\*(.*?)\*\*/g, '<span style="font-weight:700; opacity:0.9;">$1</span>');
+
+                const xaiBox = document.getElementById('xai-text');
+                if (xaiBox) xaiBox.innerHTML = txt;
+            }
+
+            // Live Charts
+            if (data.latest_reading && data.latest_reading.raw_signal) {
+                const id = data.latest_reading.sensor_id;
+                const chart = charts[id];
+                if (chart) {
+                    chart.data.datasets[0].data = data.latest_reading.raw_signal;
+                    chart.update('none');
+                }
+            }
+
+            // Metrics
+            if (data.power) {
+                document.getElementById('batt-val').textContent = data.power.battery_percentage.toFixed(0) + '%';
+                document.getElementById('solar-val').textContent = data.power.solar_rate_w.toFixed(2) + ' W';
+            }
+            if (data.network) {
+                document.getElementById('net-val').textContent = (data.network.transmission_success_rate * 100).toFixed(0) + '%';
+                document.getElementById('data-val').textContent = (data.network.daily_bytes_sent / 1e6).toFixed(1) + ' MB';
+            }
+
+            // SHAP Chart
+            if (data.latest_reading && data.latest_reading.explanation) {
+                const exp = data.latest_reading.explanation;
+                const sorted = exp.feature_names.map((n, i) => ({ n, v: exp.feature_contributions[i] }))
+                    .sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 3);
+
+                shapChart.data.labels = sorted.map(d => d.n);
+                shapChart.data.datasets[0].data = sorted.map(d => d.v);
+                shapChart.data.datasets[0].backgroundColor = sorted.map(d => d.v > 0 ? '#ef4444' : '#38bdf8');
+                shapChart.update('none');
+            }
+        }
+
+        // Init Theme on Load
+        initTheme();
+        connect();
+    </script>
+</body>
+
+</html>
